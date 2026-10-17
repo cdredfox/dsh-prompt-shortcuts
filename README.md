@@ -2,9 +2,12 @@
 
 把常用提示词存成输入框上方的一排快捷按钮，点一下就能填进输入框。
 
+![npm](https://img.shields.io/npm/v/@cdredfox/dsh-prompt-shortcuts)
+![license](https://img.shields.io/npm/l/@cdredfox/dsh-prompt-shortcuts)
+
 ![快捷按钮栏](docs/preview-row.svg)
 
-一个 [DeepSeek Harness](https://github.com/deepseek-ai) 插件。装好之后，每次打开会话都能看到自己预设的提示词按钮，不用再反复手打或者去别处复制粘贴。
+一个 DeepSeek Harness 插件。装好之后，每次打开会话都能看到自己预设的提示词按钮，不用再反复手打或者去别处复制粘贴。
 
 ## 功能
 
@@ -30,13 +33,30 @@
 
 ## 安装
 
-需要 DSH 的 Agent 会话来执行安装。在会话中让 Agent 运行 `plugin_manager` 的 `install_bundle`，`target` 指向本仓库的绝对路径。
+在 DSH 的 Agent 会话里，让它把这个包作为 bundle 安装：
 
-或者直接把这句话发给 Agent：
+> 帮我安装 @cdredfox/dsh-prompt-shortcuts 这个插件
 
-> 把 /path/to/dsh-actions 这个目录作为 bundle 安装到当前 profile
+Agent 会调用 `plugin_manager` 的 `install_bundle`，`target` 填包名即可。装完刷新页面。
 
-安装后刷新页面即可生效。
+也可以直接用命令行确认包信息：
+
+```bash
+npm view @cdredfox/dsh-prompt-shortcuts
+```
+
+**从源码安装**（想改代码或装开发版时）：
+
+```bash
+git clone https://github.com/cdredfox/dsh-actions.git
+```
+
+然后让 Agent 把克隆下来的目录路径作为 `target` 安装。
+
+### 环境要求
+
+- DSH 版本需包含 `conversation.input.dock` 槽位
+- 浏览器端需要 `@deepseek-ai/dsh-client-store`（DSH Web 自带）
 
 ## 使用
 
@@ -88,15 +108,32 @@ dsh-actions/
 ├── cordis.patch.yml     Cordis 加载器的插件行插入
 ├── index.js             Host 半边（当前为空实现）
 ├── client.js            全部界面逻辑
-└── icon.svg             插件图标
+├── icon.svg             插件图标
+├── docs/preview-row.svg README 配图
+└── LICENSE              MIT
 ```
 
-`client.js` 包含数据模型、持久化、按钮栏、弹出菜单和维护面板。没有构建步骤，改完文件重装 bundle 即可。
+`client.js` 包含数据模型、持久化、按钮栏、弹出菜单和维护面板。没有构建步骤，也没有依赖。
 
 ## 开发
 
-改 `client.js` 后需要重装 bundle 并刷新页面。因为 bundle 以 `link:` 方式安装，文件改动会直接生效，但要等浏览器重新加载模块。
+改 `client.js` 后需要重装 bundle 并刷新页面。
+
+本地调试时，bundle 以 `link:` 方式安装，文件改动会直接生效，但浏览器需要重新加载模块才会用到新代码。改完让 Agent 重装一次 bundle 最省事。
+
+发布新版本：
+
+```bash
+npm version patch   # 或 minor / major
+npm publish
+```
+
+`publishConfig` 已固定为官方 registry 与 public access，无需额外参数。
+
+## 贡献
+
+Issue 和 PR 都欢迎：https://github.com/cdredfox/dsh-actions
 
 ## 许可
 
-MIT
+[MIT](LICENSE)
