@@ -1,17 +1,17 @@
 {
   "name": "@cdredfox/dsh-prompt-shortcuts",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "DSH plugin: save frequently used prompts as a row of shortcut buttons above the composer.",
   "type": "module",
   "license": "MIT",
   "author": "cdredfox",
-  "homepage": "https://github.com/cdredfox/dsh-actions#readme",
+  "homepage": "https://github.com/cdredfox/dsh-prompt-shortcuts#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cdredfox/dsh-actions.git"
+    "url": "git+https://github.com/cdredfox/dsh-prompt-shortcuts.git"
   },
   "bugs": {
-    "url": "https://github.com/cdredfox/dsh-actions/issues"
+    "url": "https://github.com/cdredfox/dsh-prompt-shortcuts/issues"
   },
   "keywords": [
     "dsh",

@@ -198,6 +198,10 @@ npm publish
 
 ## 更新日志
 
+### 1.1.2
+
+- 仓库更名为 `dsh-prompt-shortcuts`，同步更新 `package.json` 中的仓库、主页和 issue 地址
+
 ### 1.1.1
 
 - 插件列表里显示中文名称和描述（新增 `locale/zh.json` 与 `locale/en.json`），不再是原始包名
