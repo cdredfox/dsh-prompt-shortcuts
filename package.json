@@ -1,0 +1,27 @@
+{
+  "name": "@local/dsh-prompt-shortcuts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Saved prompt shortcuts shown as a button row above the composer.",
+  "icon": "./icon.svg",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": ["index.js", "client.js", "cordis.patch.yml", "icon.svg", "locale/*.json"],
+  "meta": {
+    "title": "提示词快捷按钮",
+    "description": "把常用提示词存成输入框上方的一排快捷按钮，点击即可填入。"
+  },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": ["@deepseek-ai/dsh-client-ui-conversation"]
+    }
+  }
+}
