@@ -1,6 +1,6 @@
 {
   "name": "@cdredfox/dsh-prompt-shortcuts",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "DSH plugin: save frequently used prompts as a row of shortcut buttons above the composer.",
   "type": "module",
   "license": "MIT",
@@ -40,11 +40,15 @@
     "description": "把常用提示词存成输入框上方的一排快捷按钮，点击即可填入。"
   },
   "dsh": {
-    "bundle": { "patch": "./cordis.patch.yml" },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
     "client": {
       "platform": "web",
       "immediately": true,
-      "inject": ["@deepseek-ai/dsh-client-ui-conversation"]
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
     }
   },
   "publishConfig": {

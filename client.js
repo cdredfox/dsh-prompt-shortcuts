@@ -4,29 +4,22 @@
  * Registers two things:
  *   1. the shortcut button row in `conversation.input.dock` — the full-width
  *      seat above the composer card — whose buttons fill the composer draft;
- *   2. a floating maintenance panel opened by the row's trailing 设置 entry.
+ *   2. a floating maintenance panel opened by the row's trailing 添加指令 entry.
  *
- * The shortcut list is browser-owned state persisted through the shared
- * Client store engine, so it survives reloads without a Host round trip.
+ * The Client half holds no durable state: the Host owns the JSON document and
+ * this side mirrors it over the Connection RPC channel, so saved prompts are
+ * not lost with browser site data.
  */
 window.__ModuleLoader__.load({
-  id: '@local/dsh-prompt-shortcuts',
+  id: '@cdredfox/dsh-prompt-shortcuts',
   factory(require) {
     const React = require('react');
     const { createSnapshotStore } = require('@deepseek-ai/dsh-client-store');
     const h = React.createElement;
 
-    const STORAGE_KEY = 'dsh-prompt-shortcuts/v1';
+    /** Logical RPC channel served by this package's Host half. */
+    const ROUTE_PATH = '/api/dsh-prompt-shortcuts';
     const MAX_LABEL = 24;
-
-    /** Seed list: gives the row something useful before the first edit. */
-    function seed() {
-      return [
-        { id: 'seed-summarize', label: '总结', prompt: '请总结一下我们刚才讨论的内容要点。', enabled: true },
-        { id: 'seed-continue', label: '继续', prompt: '请继续。', enabled: true },
-        { id: 'seed-review', label: '代码审查', prompt: '请审查最近的改动，指出问题并给出修改建议。', enabled: true },
-      ];
-    }
 
     /** @returns a fresh id for a new shortcut. */
     function newId() {
@@ -50,7 +43,7 @@ window.__ModuleLoader__.load({
       };
     }
 
-    /** Coerce an arbitrary parsed value into a clean list, seeding when empty. */
+    /** Coerce an arbitrary parsed value into a clean list. */
     function normalizeList(value) {
       const list = Array.isArray(value) ? value : [];
       const out = [];
@@ -58,19 +51,54 @@ window.__ModuleLoader__.load({
         const entry = normalize(raw);
         if (entry) out.push(entry);
       }
-      return out.length > 0 ? out : seed();
+      return out;
     }
 
     /**
-     * Create the shortcut store, persisted under one localStorage key.
-     * Persistence rehydrates in the constructor, so the document is normalized
-     * once afterwards to drop records that predate current validation.
-     * @returns the snapshot store.
+     * A store whose authority is the Host document, not browser storage.
+     *
+     * `localStorage` would be cleared with site data, which silently loses the
+     * user's prompts, so the Host owns the file and this side only mirrors it.
+     * Reads happen on mount; writes replace the whole list and echo the Host's
+     * normalized answer back into the store, so validation lives in one place.
+     *
+     * @param call - the Connection RPC caller.
+     * @returns the snapshot store plus a save function.
      */
-    function createStore() {
-      const store = createSnapshotStore(normalizeList(undefined), { persist: { name: STORAGE_KEY } });
-      store.set(normalizeList(store.getSnapshot()));
-      return store;
+    function createStore(call) {
+      const store = createSnapshotStore([]);
+      let loaded = false;
+
+      /** Ask the Host for the document and adopt its answer. */
+      const refresh = async () => {
+        const result = await call('list', {});
+        if (result?.ok && Array.isArray(result.shortcuts)) {
+          loaded = true;
+          store.set(normalizeList(result.shortcuts));
+        }
+        return result;
+      };
+
+      /**
+       * Persist the whole list.
+       * @param shortcuts - the list to write.
+       * @returns the Host's answer, whose `ok` is false when it rejected the input.
+       */
+      const save = async (shortcuts) => {
+        const result = await call('replaceAll', { shortcuts });
+        if (result?.ok && Array.isArray(result.shortcuts)) {
+          store.set(normalizeList(result.shortcuts));
+        }
+        return result;
+      };
+
+      return {
+        store,
+        refresh,
+        save,
+        /** Whether the Host has answered at least once. */
+        hasLoaded: () => loaded,
+      };
     }
 
     /**
@@ -540,7 +568,7 @@ window.__ModuleLoader__.load({
               '添加指令',
             ),
           ),
-          open ? h(MaintenancePanel, { store, onClose: () => setOpen(false) }) : null,
+          open ? h(MaintenancePanel, { store, save: props.save, onClose: () => setOpen(false) }) : null,
         );
       }
 
@@ -756,6 +784,7 @@ window.__ModuleLoader__.load({
         open
           ? h(MaintenancePanel, {
               store,
+              save: props.save,
               // Clicking a card fills the draft, then closes so the user sees
               // the composer they just filled.
               onFill: (entry) => {
@@ -800,6 +829,8 @@ window.__ModuleLoader__.load({
       const [error, setError] = React.useState('');
       // Card id whose delete button is currently showing its confirm prompt.
       const [confirmId, setConfirmId] = React.useState(null);
+      // True while the Host write is in flight, so 保存 cannot double-submit.
+      const [saving, setSaving] = React.useState(false);
 
       const editing = editingId === null ? null : draft.find((entry) => entry.id === editingId) ?? null;
 
@@ -824,8 +855,14 @@ window.__ModuleLoader__.load({
         if (editingId === id) setEditingId(null);
       };
 
-      /** Validate and persist the whole draft. */
-      const save = () => {
+      /**
+       * Validate the draft locally, then persist it through the Host.
+       *
+       * Local validation gives an immediate, field-level message; the Host
+       * re-validates as the single authority and its refusal is shown verbatim.
+       * The dialog stays open on failure so nothing the user typed is lost.
+       */
+      const save = async () => {
         const cleaned = [];
         for (const [index, entry] of draft.entries()) {
           const label = (entry.label ?? '').trim();
@@ -841,7 +878,13 @@ window.__ModuleLoader__.load({
           cleaned.push({ ...entry, label, prompt });
         }
         setError('');
-        store.set(cleaned.length > 0 ? cleaned : seed());
+        setSaving(true);
+        const result = await props.save(cleaned);
+        setSaving(false);
+        if (!result?.ok) {
+          setError(result?.error ?? '保存失败。');
+          return;
+        }
         props.onClose();
       };
 
@@ -1143,7 +1186,18 @@ window.__ModuleLoader__.load({
               },
               editing ? '返回列表' : '取消',
             ),
-            h('button', { type: 'button', className: 'ps-btn ps-btn-primary', onClick: save }, '保存'),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'ps-btn ps-btn-primary',
+                disabled: saving,
+                onClick: () => {
+                  save().catch((error) => setError(String(error?.message ?? error)));
+                },
+              },
+              saving ? '保存中…' : '保存',
+            ),
           ),
         ),
       );
@@ -1152,12 +1206,58 @@ window.__ModuleLoader__.load({
     return {
       inject: ['slots'],
       apply(ctx) {
-        const store = createStore();
+        /**
+         * Call this package's Host half.
+         *
+         * The Connection service is read at call time rather than declared in
+         * `inject`: it is provided late by the Connection plugin, and a hard
+         * injection requirement that does not resolve at activation time fails
+         * the whole plugin load instead of just this call.
+         *
+         * @param endpoint - Host endpoint name.
+         * @param payload - endpoint payload.
+         * @returns the Host's value, or `{ ok: false, error }` on failure.
+         */
+        /**
+         * Call this package's Host half over its own HTTP route.
+         *
+         * A plain fetch is used instead of Connection RPC: the plugin owns one
+         * fixed path, so the transport stays verifiable (curl can hit exactly
+         * the URL the browser hits) and needs no service handshake.
+         *
+         * @param action - Host action name.
+         * @param payload - action payload.
+         * @returns the Host's `{ ok, ... }` answer, or a failure result.
+         */
+        const call = async (action, payload) => {
+          try {
+            const response = await fetch(ROUTE_PATH, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ action, ...(payload ?? {}) }),
+              cache: 'no-store',
+            });
+            if (!response.ok) {
+              return { ok: false, error: `后端返回 HTTP ${response.status}。` };
+            }
+            return await response.json();
+          } catch (error) {
+            return { ok: false, error: String(error?.message ?? error) };
+          }
+        };
+
+        const handle = createStore(call);
+
+        // Seed the store on activation; a failure leaves the row empty and
+        // surfaces through the panel rather than throwing during apply.
+        ctx.effect(() => {
+          handle.refresh().catch(() => {});
+        });
 
         ctx.effect(() => ctx.slots.inject('conversation.input.dock', () =>
           ctx.slots.register(
             { name: 'conversation.input.dock', id: 'prompt-shortcuts', order: 20, label: '提示词快捷按钮' },
-            (props) => h(ShortcutRow, { ...props, store }),
+            (props) => h(ShortcutRow, { ...props, store: handle.store, save: handle.save }),
           ),
         ));
 

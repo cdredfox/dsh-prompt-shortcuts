@@ -33,30 +33,43 @@
 
 ## 安装
 
-在 DSH 的 Agent 会话里，让它把这个包作为 bundle 安装：
+推荐从 npm 安装已发布的稳定版本：
 
-> 帮我安装 @cdredfox/dsh-prompt-shortcuts 这个插件
-
-Agent 会调用 `plugin_manager` 的 `install_bundle`，`target` 填包名即可。装完刷新页面。
-
-也可以直接用命令行确认包信息：
-
-```bash
-npm view @cdredfox/dsh-prompt-shortcuts
+```sh
+dsh plugin --profile web add @cdredfox/dsh-prompt-shortcuts
 ```
 
-**从源码安装**（想改代码或装开发版时）：
+把 `web` 换成你实际使用的 profile 名（例如 `tauri`）。安装完成后**重启 `dsh web`、刷新浏览器**，按钮栏就会出现在输入框上方。
 
-```bash
+安装过程会把这个包加入 profile 的依赖和 bundle 列表；卸载用：
+
+```sh
+dsh plugin --profile web remove @cdredfox/dsh-prompt-shortcuts
+```
+
+**从源码安装**（想改代码或试用未发布版本时）：
+
+```sh
 git clone https://github.com/cdredfox/dsh-actions.git
+cd dsh-actions
+dsh plugin --profile web add "$PWD"
 ```
-
-然后让 Agent 把克隆下来的目录路径作为 `target` 安装。
 
 ### 环境要求
 
 - DSH 版本需包含 `conversation.input.dock` 槽位
-- 浏览器端需要 `@deepseek-ai/dsh-client-store`（DSH Web 自带）
+- 浏览器端依赖 `@deepseek-ai/dsh-client-store`（DSH Web 自带，无需单独安装）
+- 无构建步骤、无运行时依赖：`index.js` 与 `client.js` 直接就是可加载的模块
+
+### 升级后请注意
+
+`1.1.0` 起提示词改存到 Host 的 JSON 文件（见[数据存储](#数据存储)）。`1.0.x` 存在浏览器 `localStorage` 里的旧数据**不会自动迁移**——首次升级后看到的是三条默认提示词，需要按需重新录入。
+
+从 `1.0.x` 升级前，可以先在浏览器开发者工具里导出旧数据：
+
+```js
+localStorage.getItem('dsh-prompt-shortcuts/v1')
+```
 
 ## 使用
 
@@ -74,15 +87,41 @@ git clone https://github.com/cdredfox/dsh-actions.git
 
 ## 数据存储
 
-提示词存在浏览器的 `localStorage`，键名 `dsh-prompt-shortcuts/v1`。
+提示词存成 Host 侧的一个 JSON 文件：
 
-这意味着：
+```
+$DSH_HOME/prompt-shortcuts.json     # 未设置 DSH_HOME 时为 ~/.dsh/prompt-shortcuts.json
+```
 
-- 数据只在本机、本浏览器配置里，不上传
-- 换浏览器或清空浏览器数据会丢失
-- 可以自己导出备份：在开发者工具里执行 `localStorage.getItem('dsh-prompt-shortcuts/v1')`
+数据归 DSH 所有，**不随浏览器缓存丢失**——换浏览器、换设备、清空站点数据都不影响。
 
-首次使用时会有三条示例提示词，可以自行修改或删除。
+写入采用**原子替换**（先写临时文件再 `rename`），并且所有写入串行排队：写一半被打断不会留下损坏文件，连续快速保存也不会互相覆盖。文件是普通 JSON，可以直接查看、用 Git 管理或手工编辑（手工改坏的行会在下次读取时被跳过，不会让按钮栏整体失效）。
+
+结构很简单：
+
+```json
+{
+  "shortcuts": [
+    { "id": "seed-continue", "label": "继续", "prompt": "继续", "enabled": true }
+  ]
+}
+```
+
+`enabled` 表示这一条是否出现在输入框上方。
+
+**路径可覆盖**：插件行支持两个可选配置项——`dshHome`（替换 `$DSH_HOME`）和 `file`（直接指定文件路径），用于多环境或同步目录。
+
+首次使用时会有三条默认提示词（继续 / 建议 / 采纳），可以自行修改或删除。
+
+## Agent 也能读写
+
+除了界面操作，插件还注册了一个 Agent 工具 `prompt_shortcuts`，可以直接在对话里让 Agent 维护提示词：
+
+> 帮我加一条提示词，名字叫「跑测试」，内容是「运行全部测试并修复失败项」
+
+> 把「建议」那条改成「给我三个可选方案，并说明取舍」
+
+工具支持 `list` / `save` / `remove` 三个动作，与界面走同一份存储和同一套校验，不存在两边数据不一致的问题。
 
 ## 设计说明
 
@@ -92,13 +131,15 @@ git clone https://github.com/cdredfox/dsh-actions.git
 
 按钮的宽度是**实测**的，不是按字符数估算——中文和英文混排、字号变化时估算都会失准。插件在屏幕外渲染一份副本量出真实宽度，再用 `ResizeObserver` 跟踪变化。
 
-## 已知限制
+浏览器端通过插件自有的 HTTP 路由 `/api/dsh-prompt-shortcuts` 读写数据（`POST`，JSON），而不是绕道通用 RPC——路径是写死的，出问题时可以直接用 curl 验证。
 
-**Agent 无法读写这些提示词。** 数据是纯浏览器状态（localStorage），没有走 Host 侧存储。如果想实现「让 Agent 帮我加一条提示词」，需要补一套 Client↔Host 的 Remote 契约。
+## 已知限制
 
 **图标是内联的。** DSH 的图标集 `@deepseek-ai/dsh-client-ui-primitives` 不对插件开放导入，所以这几个图标的 SVG 路径是复制进来的。如果 DSH 之后改了图标，这里不会自动跟着变。
 
-**只支持单行文本。** 提示词内容不支持变量、模板或附件。
+**只支持纯文本。** 提示词内容不支持变量、模板或附件。
+
+**按钮栏只读，编辑在面板里。** 想改内容要点「添加指令」进面板，按钮本身只负责填入。
 
 ## 文件结构
 
@@ -106,29 +147,56 @@ git clone https://github.com/cdredfox/dsh-actions.git
 dsh-actions/
 ├── package.json         插件清单（dsh.bundle 与 dsh.client 声明）
 ├── cordis.patch.yml     Cordis 加载器的插件行插入
-├── index.js             Host 半边（当前为空实现）
+├── index.js             Host 半边：文件存储、HTTP 路由、Agent 工具
 ├── client.js            全部界面逻辑
 ├── icon.svg             插件图标
 ├── docs/preview-row.svg README 配图
 └── LICENSE              MIT
 ```
 
-`client.js` 包含数据模型、持久化、按钮栏、弹出菜单和维护面板。没有构建步骤，也没有依赖。
+`index.js` 是 Host 半边：`ShortcutStore` 负责读写与校验，`webServer` 路由暴露给浏览器，`prompt_shortcuts` 工具暴露给 Agent——三者共用同一份实现。`client.js` 只负责界面，不含任何持久化逻辑。整个包没有构建步骤，也没有运行时依赖。
 
 ## 开发
 
-改 `client.js` 后需要重装 bundle 并刷新页面。
+改代码后重装 bundle 并重启 `dsh web`：
 
-本地调试时，bundle 以 `link:` 方式安装，文件改动会直接生效，但浏览器需要重新加载模块才会用到新代码。改完让 Agent 重装一次 bundle 最省事。
+```sh
+dsh plugin --profile web add "$PWD"   # 或 remove 后重新 add
+```
+
+Host 半边（`index.js`）的改动**必须重启进程**才生效；只有浏览器端 `client.js` 的改动可以靠刷新页面或内置 HMR 加载。
+
+调试数据接口时可以直接 curl（`$TOKEN` 取启动日志里 `?token=` 后面的值）：
+
+```sh
+curl -X POST "http://127.0.0.1:3080/api/dsh-prompt-shortcuts?token=$TOKEN" \
+  -H 'content-type: application/json' \
+  -d '{"action":"list"}'
+```
 
 发布新版本：
 
-```bash
-npm version patch   # 或 minor / major
+```sh
+npm version minor   # 或 patch / major
 npm publish
 ```
 
-`publishConfig` 已固定为官方 registry 与 public access，无需额外参数。
+`publishConfig` 已固定为官方 registry 与 public access，无需额外参数。若 npm 开启了 2FA，`npm publish` 会要求完成一次浏览器验证。
+
+## 更新日志
+
+### 1.1.0
+
+- **提示词改存 Host 文件**（`$DSH_HOME/prompt-shortcuts.json`），不再使用浏览器 `localStorage`，清理浏览器数据不会再丢
+- 新增 `prompt_shortcuts` Agent 工具，可以在对话里让 Agent 增删改提示词
+- 默认提示词改为「继续 / 建议 / 采纳」
+- 修复安装包更名后客户端模块 id 未同步导致的启动失败
+
+**升级须知**：`1.0.x` 的 `localStorage` 数据不会自动迁移。
+
+### 1.0.0
+
+首个版本：输入框上方的快捷按钮栏、置顶控制、溢出自动收纳、维护面板。
 
 ## 贡献
 
