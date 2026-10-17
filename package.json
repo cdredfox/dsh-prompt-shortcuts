@@ -22,10 +22,15 @@
     "composer"
   ],
   "icon": "./icon.svg",
+  "meta": {
+    "title": "提示词快捷按钮",
+    "description": "把常用提示词存成输入框上方的一排快捷按钮，点击即填入。支持置顶、搜索、溢出自动收纳。"
+  },
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
   },
   "files": [
     "index.js",
@@ -36,12 +41,9 @@
     "LICENSE",
     "docs/preview-row.png",
     "docs/m1.png",
-    "docs/m2.png"
+    "docs/m2.png",
+    "locale/*.json"
   ],
-  "meta": {
-    "title": "提示词快捷按钮",
-    "description": "把常用提示词存成输入框上方的一排快捷按钮，点击即可填入。"
-  },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
