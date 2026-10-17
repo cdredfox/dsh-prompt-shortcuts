@@ -5,9 +5,19 @@
 ![npm](https://img.shields.io/npm/v/@cdredfox/dsh-prompt-shortcuts)
 ![license](https://img.shields.io/npm/l/@cdredfox/dsh-prompt-shortcuts)
 
-![快捷按钮栏](docs/preview-row.svg)
+![快捷按钮栏](docs/preview-row.png)
 
 一个 DeepSeek Harness 插件。装好之后，每次打开会话都能看到自己预设的提示词按钮，不用再反复手打或者去别处复制粘贴。
+
+## 界面
+
+**维护面板**——点「添加指令」打开，卡片网格列出全部提示词，支持搜索；卡片底部可直接编辑、置顶或删除。
+
+![维护面板](docs/m1.png)
+
+**编辑单条**——点卡片上的「编辑」进入，改完点「返回列表」回卡片，再点「保存」写入。
+
+![编辑提示词](docs/m2.png)
 
 ## 功能
 
@@ -30,6 +40,8 @@
 - 卡片网格展示所有提示词，带搜索框
 - 每张卡片可以**编辑**、**置顶/取消置顶**、**删除**（删除有二次确认）
 - 点卡片本身就是填入输入框
+
+**关于「置顶」**：它就是这个提示词要不要出现在输入框上方。每条提示词都可以单独控制，所以你可以存很多条，只把最常用的几个放出来。
 
 ## 安装
 
@@ -82,8 +94,6 @@ localStorage.getItem('dsh-prompt-shortcuts/v1')
 | 面板里点「编辑」 | 修改名称和内容 |
 | 面板里点「置顶」 | 控制是否显示在按钮栏上 |
 | 面板里点「删除」 | 删除（需二次确认） |
-
-**关于「置顶」**：它就是这个提示词要不要出现在输入框上方。每条提示词都可以单独控制，所以你可以存很多条，只把最常用的几个放出来。
 
 ## 数据存储
 
@@ -150,7 +160,10 @@ dsh-actions/
 ├── index.js             Host 半边：文件存储、HTTP 路由、Agent 工具
 ├── client.js            全部界面逻辑
 ├── icon.svg             插件图标
-├── docs/preview-row.svg README 配图
+├── docs/
+│   ├── preview-row.png  按钮栏截图
+│   ├── m1.png           维护面板截图
+│   └── m2.png           编辑提示词截图
 └── LICENSE              MIT
 ```
 

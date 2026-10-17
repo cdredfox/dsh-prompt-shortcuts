@@ -33,7 +33,10 @@
     "cordis.patch.yml",
     "icon.svg",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "docs/preview-row.png",
+    "docs/m1.png",
+    "docs/m2.png"
   ],
   "meta": {
     "title": "提示词快捷按钮",
