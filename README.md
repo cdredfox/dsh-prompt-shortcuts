@@ -198,6 +198,11 @@ npm publish
 
 ## 更新日志
 
+### 1.1.1
+
+- 插件列表里显示中文名称和描述（新增 `locale/zh.json` 与 `locale/en.json`），不再是原始包名
+- README 换成真机截图
+
 ### 1.1.0
 
 - **提示词改存 Host 文件**（`$DSH_HOME/prompt-shortcuts.json`），不再使用浏览器 `localStorage`，清理浏览器数据不会再丢
