@@ -62,8 +62,8 @@ dsh plugin --profile web remove @cdredfox/dsh-prompt-shortcuts
 **从源码安装**（想改代码或试用未发布版本时）：
 
 ```sh
-git clone https://github.com/cdredfox/dsh-actions.git
-cd dsh-actions
+git clone https://github.com/cdredfox/dsh-prompt-shortcuts.git
+cd dsh-prompt-shortcuts
 dsh plugin --profile web add "$PWD"
 ```
 
@@ -154,7 +154,7 @@ $DSH_HOME/prompt-shortcuts.json     # 未设置 DSH_HOME 时为 ~/.dsh/prompt-sh
 ## 文件结构
 
 ```
-dsh-actions/
+dsh-prompt-shortcuts/
 ├── package.json         插件清单（dsh.bundle 与 dsh.client 声明）
 ├── cordis.patch.yml     Cordis 加载器的插件行插入
 ├── index.js             Host 半边：文件存储、HTTP 路由、Agent 工具
@@ -218,7 +218,7 @@ npm publish
 
 ## 贡献
 
-Issue 和 PR 都欢迎：https://github.com/cdredfox/dsh-actions
+Issue 和 PR 都欢迎：https://github.com/cdredfox/dsh-prompt-shortcuts
 
 ## 许可
 
